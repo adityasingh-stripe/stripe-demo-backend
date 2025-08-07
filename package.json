@@ -1,7 +1,7 @@
 {
-  "name": "hsbc-demo-backend",
+  "name": "demo-backend",
   "version": "1.0.0",
-  "description": "Backend server for HSBC Demo iOS app with Stripe Connect integration",
+  "description": "Backend server for Demo iOS app with Stripe Connect integration",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,12 +11,11 @@
   "keywords": [
     "stripe",
     "connect",
-    "hsbc",
     "payments",
     "payouts",
     "express"
   ],
-  "author": "HSBC Demo Team",
+  "author": "Aditya Singh <adityasingh@stripe.com>",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",

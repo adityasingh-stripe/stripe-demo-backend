@@ -85,6 +85,7 @@ const COMPANY_PROFILES = [
     name: "Fawlty Hotels Ltd",
     email: "info@fawltyhotels.co.uk",
     phone: "+441803558000",
+    tax_id: "12345678",
     address: {
       line1: "123 High Street",
       city: "Torquay",
@@ -97,6 +98,21 @@ const COMPANY_PROFILES = [
       email: "basil@fawltyhotels.co.uk",
       phone: "+441803558001",
       dob: { day: 12, month: 5, year: 1955 },
+      address: {
+        line1: "123 High Street",
+        city: "Torquay",
+        postal_code: "TQ1 3AB",
+        country: "GB",
+      },
+      title: "CEO",
+      relationship: {
+        representative: true,
+        director: true,
+        executive: true,
+        owner: true,
+        percent_ownership: 30,
+        title: "CEO",
+      },
     },
     mcc: "7011", // Hotels and Motels
     url: "https://fawltyhotels.co.uk",
@@ -107,6 +123,7 @@ const COMPANY_PROFILES = [
     name: "Wheezes Retail Ltd",
     email: "contact@wheezesretail.co.uk",
     phone: "+442071234567",
+    tax_id: "12345678",
     address: {
       line1: "45 Oxford Street",
       city: "London",
@@ -119,6 +136,21 @@ const COMPANY_PROFILES = [
       email: "fred@wheezesretail.co.uk",
       phone: "+442071234568",
       dob: { day: 1, month: 4, year: 1978 },
+      address: {
+        line1: "45 Oxford Street",
+        city: "London",
+        postal_code: "W1C 2DX",
+        country: "GB",
+      },
+      title: "Director",
+      relationship: {
+        representative: true,
+        director: true,
+        executive: true,
+        owner: true,
+        percent_ownership: 25,
+        title: "Director",
+      },
     },
     mcc: "5999", // Miscellaneous Retail
     url: "https://wheezesretail.co.uk",
@@ -129,6 +161,7 @@ const COMPANY_PROFILES = [
     name: "Galaxy Dining Ltd",
     email: "reservations@galaxydining.co.uk",
     phone: "+447700900999",
+    tax_id: "12345678",
     address: {
       line1: "12 Covent Garden",
       city: "London",
@@ -141,6 +174,21 @@ const COMPANY_PROFILES = [
       email: "zaphod@galaxydining.co.uk",
       phone: "+447700900998",
       dob: { day: 1, month: 1, year: 1970 },
+      address: {
+        line1: "12 Covent Garden",
+        city: "London",
+        postal_code: "WC2E 9HQ",
+        country: "GB",
+      },
+      title: "Managing Director",
+      relationship: {
+        representative: true,
+        director: true,
+        executive: true,
+        owner: true,
+        percent_ownership: 35,
+        title: "Managing Director",
+      },
     },
     mcc: "5812", // Eating and Drinking Places
     url: "https://galaxydining.co.uk",

@@ -18,7 +18,12 @@ const accountStatuses = new Map();
  */
 async function getProfiles(req, res) {
   try {
-    const profiles = accountService.getDemoProfiles();
+    const { useHardcoded } = req.query;
+    const options = {
+      useHardcoded: useHardcoded === "true",
+    };
+
+    const profiles = accountService.getDemoProfiles(options);
 
     res.json({
       success: true,
@@ -26,6 +31,50 @@ async function getProfiles(req, res) {
     });
   } catch (error) {
     console.error("Error getting profiles:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
+/**
+ * Generate multiple profiles of a specific type
+ */
+async function generateProfiles(req, res) {
+  try {
+    const { type = "individual", count = 5 } = req.query;
+
+    // Validate type
+    if (!["individual", "company"].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type must be either "individual" or "company"',
+      });
+    }
+
+    // Validate count
+    const profileCount = parseInt(count);
+    if (isNaN(profileCount) || profileCount < 1 || profileCount > 20) {
+      return res.status(400).json({
+        success: false,
+        message: "Count must be a number between 1 and 20",
+      });
+    }
+
+    const profiles = accountService.generateMultipleProfiles(
+      type,
+      profileCount
+    );
+
+    res.json({
+      success: true,
+      type,
+      count: profileCount,
+      profiles,
+    });
+  } catch (error) {
+    console.error("Error generating profiles:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -100,6 +149,26 @@ async function createAccount(req, res) {
 
     console.info(`INFO: Account created successfully: ${account.id}`);
 
+    // Create persons for company accounts
+    let createdPersons = [];
+    if (profile_type === "company" && profile_data.representatives) {
+      try {
+        createdPersons = await accountService.createAccountPersons(
+          account.id,
+          profile_data.representatives
+        );
+        console.info(
+          `INFO: Created ${createdPersons.length} persons for account ${account.id}`
+        );
+      } catch (personError) {
+        console.error(
+          `ERROR: Failed to create persons for account ${account.id}:`,
+          personError.message
+        );
+        // Continue without failing the account creation
+      }
+    }
+
     // Create a default location for Terminal SDK
     let location = null;
     try {
@@ -115,6 +184,7 @@ async function createAccount(req, res) {
       success: true,
       account_id: account.id,
       location_id: location?.id,
+      persons_created: createdPersons.length,
       message: "Account created successfully",
     });
   } catch (error) {
@@ -325,6 +395,7 @@ async function getAccountStatus(req, res) {
 
 module.exports = {
   getProfiles,
+  generateProfiles,
   createAccount,
   createAccountSession,
   createTestData,

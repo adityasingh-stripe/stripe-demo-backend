@@ -1,4 +1,4 @@
-# HSBC Demo Backend
+# Demo Backend
 
 Express.js backend for Stripe Connect integration with iOS app.
 
@@ -42,11 +42,14 @@ demo-backend/
    npm install
    ```
 
-2. **Create `.env` file:**
+2. **Rename `.env.example` file to `.env` and add the secrets:**
 
    ```bash
-   STRIPE_SECRET_KEY=sk_test_your_key_here
-   PORT=3000
+   STRIPE_SECRET_KEY=sk_test_51RiB***a8r
+   STRIPE_PUBLISHABLE_KEY=pk_test_51R***Ezp
+   STRIPE_WEBHOOK_SECRET=whsec_8d2***c07b7
+   STRIPE_ACCOUNT_ID=acct_****
+   PORT=4242
    ```
 
 3. **Run server:**
@@ -60,6 +63,7 @@ Server runs on `http://localhost:3000`
 
 ### Core APIs (used by iOS app)
 
+- `GET /api/app_info` - Returns app configuration including branding: `{"publishable_key": "pk_test_...", "logo_url": "...", "primary_color": "#FF0000"}`
 - `GET /api/profiles` - Demo profiles for selection
 - `POST /api/accounts` - Create connected account
 - `POST /api/account_session` - Account session for embedded components

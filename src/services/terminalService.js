@@ -9,7 +9,7 @@ async function createDefaultLocation(accountId) {
   try {
     const location = await stripe.terminal.locations.create(
       {
-        display_name: "HSBC Business Location",
+        display_name: "Business Location",
         address: {
           line1: "123 Business Street",
           city: "London",

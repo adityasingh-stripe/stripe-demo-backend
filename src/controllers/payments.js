@@ -34,6 +34,7 @@ async function createPaymentIntent(req, res) {
       payment_method_types = ["card_present"],
       capture_method = "automatic",
       account_id,
+      customer,
     } = req.body;
 
     console.info(
@@ -46,13 +47,24 @@ async function createPaymentIntent(req, res) {
       return res.status(400).json({ error: "account_id is required" });
     }
 
+    // Build PaymentIntent parameters
+    const paymentIntentParams = {
+      amount: amount,
+      currency: currency,
+      payment_method_types: payment_method_types,
+      capture_method: capture_method,
+    };
+
+    // Add customer if provided
+    if (customer && customer.id) {
+      paymentIntentParams.customer = customer.id;
+      console.info(
+        `INFO: Attaching customer ${customer.id} (${customer.name}) to PaymentIntent`
+      );
+    }
+
     const paymentIntent = await stripe.paymentIntents.create(
-      {
-        amount: amount,
-        currency: currency,
-        payment_method_types: payment_method_types,
-        capture_method: capture_method,
-      },
+      paymentIntentParams,
       {
         stripeAccount: account_id, // Create PaymentIntent for the connected account
       }
