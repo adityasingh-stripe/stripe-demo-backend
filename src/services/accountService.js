@@ -162,9 +162,6 @@ async function createConnectedAccount(
 
 /**
  * Create persons (representatives/owners) for a company account
- * @param {string} accountId - The account ID
- * @param {Array} representatives - Array of representative objects
- * @returns {Promise<Array>} - Array of created person objects
  */
 async function createAccountPersons(accountId, representatives) {
   if (
@@ -190,15 +187,11 @@ async function createAccountPersons(accountId, representatives) {
       });
 
       createdPersons.push(person);
-      console.info(
-        `INFO: Created person ${person.id} for account ${accountId}`
-      );
     } catch (error) {
       console.error(
-        `ERROR: Failed to create person for account ${accountId}:`,
+        `Failed to create person for account ${accountId}:`,
         error.message
       );
-      // Continue creating other persons even if one fails
     }
   }
 
@@ -282,20 +275,9 @@ function generateMultipleProfiles(type, count = 5) {
 
 /**
  * Create account session for embedded components
- * @param {string} accountId - The account ID
- * @returns {Promise<object>} - Account session object
  */
 async function createAccountSession(accountId) {
-  // First, let's fetch the account to see its current state
   const account = await stripe.accounts.retrieve(accountId);
-  console.info(
-    `INFO: Account business_type: ${account.business_type}, charges_enabled: ${account.charges_enabled}, payouts_enabled: ${account.payouts_enabled}`
-  );
-  console.info(
-    `INFO: Account requirements currently_due: ${JSON.stringify(
-      account.requirements?.currently_due || []
-    )}`
-  );
 
   const session = await stripe.accountSessions.create({
     account: accountId,

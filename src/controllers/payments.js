@@ -1,8 +1,8 @@
 const stripe = require("../config/stripe");
-const terminalService = require("../services/terminalService");
+const { randomSelection, NAMES } = require("../config/constants");
 
 /**
- * Connection token endpoint for Stripe Terminal SDK (Connected Account scoped)
+ * Create connection token for Terminal SDK
  */
 async function createConnectionToken(req, res) {
   try {
@@ -12,8 +12,9 @@ async function createConnectionToken(req, res) {
       return res.status(400).json({ error: "account_id is required" });
     }
 
-    const connectionToken = await terminalService.createConnectionToken(
-      account_id
+    const connectionToken = await stripe.terminal.connectionTokens.create(
+      {},
+      { stripeAccount: account_id }
     );
 
     res.json({ secret: connectionToken.secret });
@@ -24,55 +25,40 @@ async function createConnectionToken(req, res) {
 }
 
 /**
- * Create PaymentIntent for Terminal SDK (Connected Account scoped)
+ * Create payment intent
  */
 async function createPaymentIntent(req, res) {
   try {
-    const {
-      amount,
-      currency,
-      payment_method_types = ["card_present"],
-      capture_method = "automatic",
-      account_id,
-      customer,
-    } = req.body;
-
-    console.info(
-      `INFO: Creating PaymentIntent - Amount: ${amount} ${currency} (£${
-        amount / 100
-      })`
-    );
+    const { amount, currency = "gbp", account_id } = req.body;
 
     if (!account_id) {
       return res.status(400).json({ error: "account_id is required" });
     }
 
-    // Build PaymentIntent parameters
-    const paymentIntentParams = {
-      amount: amount,
-      currency: currency,
-      payment_method_types: payment_method_types,
-      capture_method: capture_method,
-    };
-
-    // Add customer if provided
-    if (customer && customer.id) {
-      paymentIntentParams.customer = customer.id;
-      console.info(
-        `INFO: Attaching customer ${customer.id} (${customer.name}) to PaymentIntent`
-      );
-    }
+    const customer = await stripe.customers.create(
+      {
+        name: `${randomSelection(NAMES).firstName} ${
+          randomSelection(NAMES).lastName
+        }`,
+      },
+      { stripeAccount: account_id }
+    );
 
     const paymentIntent = await stripe.paymentIntents.create(
-      paymentIntentParams,
       {
-        stripeAccount: account_id, // Create PaymentIntent for the connected account
-      }
+        amount,
+        currency,
+        customer: customer.id,
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      },
+      { stripeAccount: account_id }
     );
 
     res.json({
-      client_secret: paymentIntent.client_secret,
-      id: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
+      customer: customer,
     });
   } catch (error) {
     console.error("Error creating payment intent:", error);
@@ -81,7 +67,7 @@ async function createPaymentIntent(req, res) {
 }
 
 /**
- * Get locations for a connected account
+ * Get locations for Terminal SDK
  */
 async function getLocations(req, res) {
   try {
@@ -91,9 +77,12 @@ async function getLocations(req, res) {
       return res.status(400).json({ error: "account_id is required" });
     }
 
-    const locations = await terminalService.getLocations(account_id);
+    const locations = await stripe.terminal.locations.list(
+      {},
+      { stripeAccount: account_id }
+    );
 
-    res.json({ locations });
+    res.json({ locations: locations.data });
   } catch (error) {
     console.error("Error fetching locations:", error);
     res.status(500).json({ error: error.message });

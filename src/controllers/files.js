@@ -2,60 +2,43 @@ const stripe = require("../config/stripe");
 const https = require("https");
 
 /**
- * Serve Stripe uploaded files (logos, icons, etc.)
- * Downloads files from Stripe using the Files API and streams them to the client
+ * Serve Stripe files (logo, icon) by proxying from Stripe
  */
 async function serveStripeFile(req, res) {
+  const { fileId } = req.params;
+
+  if (!fileId) {
+    return res.status(400).json({ error: "File ID is required" });
+  }
+
   try {
-    const { fileId } = req.params;
-
-    if (!fileId) {
-      return res.status(400).json({ error: "File ID is required" });
-    }
-
-    console.info(`INFO: Serving Stripe file: ${fileId}`);
-
-    // Retrieve file metadata from Stripe
     const file = await stripe.files.retrieve(fileId);
 
     if (!file) {
       return res.status(404).json({ error: "File not found" });
     }
 
-    // Download the file content from Stripe using authenticated request
-    const fileUrl = `https://files.stripe.com/v1/files/${fileId}/contents`;
-
-    // Create authenticated request to Stripe
-    const requestOptions = {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
-        "User-Agent": "stripe-backend-proxy/1.0",
-      },
-    };
+    const fileUrl = file.links?.data?.[0]?.url;
+    if (!fileUrl) {
+      return res.status(404).json({ error: "File URL not available" });
+    }
 
     https
-      .get(fileUrl, requestOptions, (fileResponse) => {
+      .get(fileUrl, (fileResponse) => {
         if (fileResponse.statusCode !== 200) {
-          console.error(`Failed to download file: ${fileResponse.statusCode}`);
           return res
             .status(500)
             .json({ error: "Failed to download file from Stripe" });
         }
 
-        // Set appropriate headers for file serving
         res.set({
           "Content-Type": file.type || "application/octet-stream",
-          "Content-Length": fileResponse.headers["content-length"],
-          "Cache-Control": "public, max-age=3600", // Cache for 1 hour
-          ETag: `"${fileId}"`, // Use file ID as ETag for caching
+          "Content-Disposition": `inline; filename="${
+            file.filename || fileId
+          }"`,
+          "Cache-Control": "public, max-age=3600",
         });
 
-        console.info(
-          `INFO: Successfully serving file ${fileId} (${file.type})`
-        );
-
-        // Stream the file content to the client
         fileResponse.pipe(res);
       })
       .on("error", (error) => {
@@ -63,7 +46,7 @@ async function serveStripeFile(req, res) {
         res.status(500).json({ error: "Failed to download file" });
       });
   } catch (error) {
-    console.error("ERROR: Failed to serve Stripe file:", error.message);
+    console.error("Failed to serve Stripe file:", error.message);
 
     if (error.type === "StripeInvalidRequestError") {
       return res.status(404).json({ error: "File not found" });

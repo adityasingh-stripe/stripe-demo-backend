@@ -45,7 +45,6 @@ async function generateProfiles(req, res) {
   try {
     const { type = "individual", count = 5 } = req.query;
 
-    // Validate type
     if (!["individual", "company"].includes(type)) {
       return res.status(400).json({
         success: false,
@@ -53,7 +52,6 @@ async function generateProfiles(req, res) {
       });
     }
 
-    // Validate count
     const profileCount = parseInt(count);
     if (isNaN(profileCount) || profileCount < 1 || profileCount > 20) {
       return res.status(400).json({
@@ -87,15 +85,8 @@ async function generateProfiles(req, res) {
  */
 async function createAccount(req, res) {
   try {
-    console.info("INFO: Creating connected account...");
+    const { profile_type, profile_data = {}, business_profile = {} } = req.body;
 
-    const {
-      profile_type, // 'individual' or 'company'
-      profile_data = {},
-      business_profile = {},
-    } = req.body;
-
-    // Validate input
     if (!isValidProfileType(profile_type)) {
       return res.status(400).json({
         success: false,
@@ -110,9 +101,6 @@ async function createAccount(req, res) {
       });
     }
 
-    console.info(`INFO: Creating ${profile_type} account`);
-
-    // Validate profile data based on type
     let validation;
     if (profile_type === "individual") {
       validation = validateIndividualProfile(profile_data);
@@ -128,7 +116,6 @@ async function createAccount(req, res) {
       });
     }
 
-    // Validate business profile if provided
     if (business_profile && Object.keys(business_profile).length > 0) {
       const businessValidation = validateBusinessProfile(business_profile);
       if (!businessValidation.isValid) {
@@ -140,16 +127,12 @@ async function createAccount(req, res) {
       }
     }
 
-    // Create the account
     const account = await accountService.createConnectedAccount(
       profile_type,
       profile_data,
       business_profile
     );
 
-    console.info(`INFO: Account created successfully: ${account.id}`);
-
-    // Create persons for company accounts
     let createdPersons = [];
     if (profile_type === "company" && profile_data.representatives) {
       try {
@@ -157,27 +140,21 @@ async function createAccount(req, res) {
           account.id,
           profile_data.representatives
         );
-        console.info(
-          `INFO: Created ${createdPersons.length} persons for account ${account.id}`
-        );
       } catch (personError) {
         console.error(
-          `ERROR: Failed to create persons for account ${account.id}:`,
+          `Failed to create persons for account ${account.id}:`,
           personError.message
         );
-        // Continue without failing the account creation
       }
     }
 
-    // Create a default location for Terminal SDK
     let location = null;
     try {
       location = await terminalService.createDefaultLocation(account.id);
     } catch (locationError) {
       console.warn(
-        `WARN: Failed to create default location for account ${account.id}: ${locationError.message}`
+        `Failed to create default location for account ${account.id}: ${locationError.message}`
       );
-      // Continue without failing the account creation
     }
 
     res.json({
@@ -209,35 +186,21 @@ async function createAccountSession(req, res) {
       });
     }
 
-    console.info(`INFO: Creating account session for account: ${accountId}`);
-
     const session = await accountService.createAccountSession(accountId);
-
-    console.info(
-      `INFO: Account session created successfully for account: ${accountId}`
-    );
 
     res.json({
       clientSecret: session.client_secret,
     });
   } catch (error) {
     console.error(
-      `ERROR: Failed to create account session for account ${req.headers.account}:`,
+      `Failed to create account session for account ${req.headers.account}:`,
       error.message
     );
 
-    // Log additional details for debugging
     if (error.type === "StripeInvalidRequestError") {
       console.error(
-        `ERROR: Stripe validation error - ${error.param}: ${error.message}`
+        `Stripe validation error - ${error.param}: ${error.message}`
       );
-      console.error(
-        `ERROR: Full error details:`,
-        JSON.stringify(error, null, 2)
-      );
-    } else {
-      console.error(`ERROR: Error type: ${error.type}`);
-      console.error(`ERROR: Full error:`, error);
     }
 
     res.status(500).json({
@@ -279,12 +242,8 @@ async function createTestData(req, res) {
  * Handle account.updated webhook
  */
 function handleAccountUpdated(account) {
-  console.info(`Account updated: ${account.id}`);
-
-  // Derive the current status
   const statusInfo = deriveAccountStatus(account);
 
-  // Store the status
   accountStatuses.set(account.id, {
     account_id: account.id,
     ...statusInfo,
@@ -297,21 +256,14 @@ function handleAccountUpdated(account) {
     },
   });
 
-  console.info(
-    `Account ${account.id} status: ${statusInfo.status}${
-      statusInfo.badge ? ` (${statusInfo.badge})` : ""
-    }`
-  );
-
-  // Log any requirements that need attention
   if (
     statusInfo.requirements.currently_due &&
     statusInfo.requirements.currently_due.length > 0
   ) {
     console.warn(
-      `WARNING: Currently due requirements: ${statusInfo.requirements.currently_due.join(
-        ", "
-      )}`
+      `Currently due requirements for ${
+        account.id
+      }: ${statusInfo.requirements.currently_due.join(", ")}`
     );
   }
   if (
@@ -319,22 +271,22 @@ function handleAccountUpdated(account) {
     statusInfo.requirements.past_due.length > 0
   ) {
     console.warn(
-      `WARNING: Past due requirements: ${statusInfo.requirements.past_due.join(
-        ", "
-      )}`
+      `Past due requirements for ${
+        account.id
+      }: ${statusInfo.requirements.past_due.join(", ")}`
     );
   }
 }
 
 /**
- * Fetch account from Stripe and update status (for capability/person events)
+ * Fetch account from Stripe and update status
  */
 async function fetchAndUpdateAccountStatus(accountId) {
   try {
     const account = await stripe.accounts.retrieve(accountId);
     handleAccountUpdated(account);
   } catch (error) {
-    console.error(`ERROR:Error fetching account ${accountId}:`, error.message);
+    console.error(`Error fetching account ${accountId}:`, error.message);
   }
 }
 
@@ -345,14 +297,9 @@ async function getAccountStatus(req, res) {
   try {
     const { accountId } = req.params;
 
-    // Check if we have cached status
     let statusInfo = accountStatuses.get(accountId);
 
-    // If no cached status, fetch from Stripe and derive status
     if (!statusInfo) {
-      console.info(
-        `INFO: No cached status for ${accountId}, fetching from Stripe...`
-      );
       try {
         const account = await stripe.accounts.retrieve(accountId);
         const derivedStatus = deriveAccountStatus(account);
@@ -369,7 +316,6 @@ async function getAccountStatus(req, res) {
           },
         };
 
-        // Cache it
         accountStatuses.set(accountId, statusInfo);
       } catch (stripeError) {
         return res.status(404).json({
@@ -385,7 +331,7 @@ async function getAccountStatus(req, res) {
       account_status: statusInfo,
     });
   } catch (error) {
-    console.error("ERROR: Error getting account status:", error);
+    console.error("Error getting account status:", error);
     res.status(500).json({
       success: false,
       message: error.message,
