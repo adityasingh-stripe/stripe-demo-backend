@@ -33,7 +33,7 @@ async function createPaymentIntent(req, res) {
       amount,
       currency = "gbp",
       account_id,
-      payment_method_types = ["card"],
+      payment_method_types = ["card_present"],
     } = req.body;
 
     if (!account_id) {
