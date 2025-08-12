@@ -29,7 +29,12 @@ async function createConnectionToken(req, res) {
  */
 async function createPaymentIntent(req, res) {
   try {
-    const { amount, currency = "gbp", account_id } = req.body;
+    const {
+      amount,
+      currency = "gbp",
+      account_id,
+      payment_method_types = ["card"],
+    } = req.body;
 
     if (!account_id) {
       return res.status(400).json({ error: "account_id is required" });
@@ -49,8 +54,10 @@ async function createPaymentIntent(req, res) {
         amount,
         currency,
         customer: customer.id,
+        payment_method_types,
         automatic_payment_methods: {
           enabled: true,
+          allow_redirects: "never",
         },
       },
       { stripeAccount: account_id }
