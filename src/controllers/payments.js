@@ -55,10 +55,6 @@ async function createPaymentIntent(req, res) {
         currency,
         customer: customer.id,
         payment_method_types,
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: "never",
-        },
       },
       { stripeAccount: account_id }
     );
