@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Successful</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        padding: 20px;
+      }
+
+      .success-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        max-width: 520px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .merchant-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 40px;
+        position: relative;
+      }
+
+      .merchant-logo {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        object-fit: cover;
+        background: #e5e7eb;
+      }
+
+      .merchant-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0;
+      }
+
+      .sandbox-badge {
+        background: #6772e5;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .success-icon {
+        margin: 0 auto 32px;
+        width: 60px;
+        height: 60px;
+      }
+
+      .success-title {
+        font-size: 28px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0 0 16px 0;
+        line-height: 1.2;
+      }
+
+      .success-subtitle {
+        font-size: 16px;
+        color: #6b7280;
+        margin: 0 0 32px 0;
+        line-height: 1.4;
+      }
+
+      .payment-amount {
+        font-size: 48px;
+        font-weight: 300;
+        color: #00d924;
+        margin: 24px 0 32px;
+        letter-spacing: -0.02em;
+      }
+
+      .payment-details {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+
+      .detail-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: #6b7280;
+      }
+
+      .detail-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1a1a1a;
+        text-align: right;
+      }
+
+      .customer-info {
+        margin-bottom: 32px;
+        display: none;
+      }
+
+      .customer-info p {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+      }
+
+      .footer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .powered-by {
+        font-size: 14px;
+        color: #9ca3af;
+      }
+
+      .powered-by strong {
+        color: #6772e5;
+        font-weight: 600;
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 24px;
+      }
+
+      .footer-link {
+        font-size: 14px;
+        color: #6b7280;
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+
+      .footer-link:hover {
+        color: #374151;
+      }
+
+      /* Loading state */
+      .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e5e7eb;
+        border-top: 3px solid #6772e5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-spinner p {
+        color: #6b7280;
+        margin: 0;
+      }
+
+      /* Error state */
+      .error-message {
+        text-align: center;
+      }
+
+      .error-message h2 {
+        color: #dc2626;
+        margin-bottom: 8px;
+        font-size: 24px;
+      }
+
+      .error-message p {
+        color: #6b7280;
+        line-height: 1.5;
+      }
+
+      /* Responsive design */
+      @media (max-width: 640px) {
+        .success-container {
+          padding: 24px;
+          margin: 16px;
+        }
+
+        .merchant-header {
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .success-title {
+          font-size: 24px;
+        }
+
+        .payment-amount {
+          font-size: 36px;
+        }
+
+        .detail-row {
+          flex-direction: column;
+          gap: 4px;
+          align-items: flex-start;
+        }
+
+        .detail-value {
+          text-align: left;
+        }
+
+        .footer {
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .footer-links {
+          gap: 16px;
+        }
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="success-container">
+      <!-- Loading state -->
+      <div id="loading" class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading payment details...</p>
+      </div>
+
+      <!-- Error state -->
+      <div id="error" class="error-message hidden">
+        <h2>Something went wrong</h2>
+        <p id="error-text">
+          Unable to load payment details. Your payment was successful, but we
+          couldn't retrieve the transaction details. Please contact support if
+          you need assistance.
+        </p>
+      </div>
+
+      <!-- Success content -->
+      <div id="success-content" class="hidden">
+        <!-- Header with merchant info -->
+        <div class="merchant-header">
+          <div id="merchant-logo" class="merchant-logo hidden"></div>
+          <h1 id="merchant-name" class="merchant-name">Digital Network</h1>
+          <div class="sandbox-badge">Sandbox</div>
+        </div>
+
+        <!-- Success checkmark -->
+        <div class="success-icon">
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+            <circle
+              cx="30"
+              cy="30"
+              r="28"
+              stroke="#00D924"
+              stroke-width="3"
+              fill="none"
+            />
+            <path
+              d="M20 30L26 36L40 22"
+              stroke="#00D924"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </div>
+
+        <!-- Success message -->
+        <h2 class="success-title">Payment Successful!</h2>
+
+        <p class="success-subtitle">
+          Your payment has been processed successfully. A receipt will be sent
+          to your email if provided.
+        </p>
+
+        <!-- Payment amount -->
+        <div id="payment-amount" class="payment-amount">£0.00</div>
+
+        <!-- Payment details -->
+        <div class="payment-details">
+          <div class="detail-row">
+            <span class="detail-label">Payment Status</span>
+            <span id="status" class="detail-value">Completed</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Business</span>
+            <span id="business" class="detail-value">Digital Network</span>
+          </div>
+          <div id="customer-row" class="detail-row hidden">
+            <span class="detail-label">Customer</span>
+            <span id="customer" class="detail-value">-</span>
+          </div>
+          <div id="email-row" class="detail-row hidden">
+            <span class="detail-label">Email</span>
+            <span id="email" class="detail-value">-</span>
+          </div>
+        </div>
+
+        <!-- Customer info (hidden by default, shown if email available) -->
+        <div id="customer-info" class="customer-info">
+          <p>Receipt sent to: <span id="customer-email-receipt"></span></p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <span class="powered-by">Powered by <strong>stripe</strong></span>
+          <div class="footer-links">
+            <a href="#" class="footer-link">Terms</a>
+            <a href="#" class="footer-link">Privacy</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Get session ID from URL parameters
+      function getSessionId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get("session_id");
+      }
+
+      function getAccountId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get("account_id");
+      }
+
+      // Format currency amount
+      function formatAmount(amount, currency) {
+        const formatter = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: currency?.toUpperCase() || "GBP",
+        });
+        return formatter.format(amount / 100);
+      }
+
+      // Fetch checkout session data
+      async function fetchCheckoutSession(sessionId, accountId) {
+        try {
+          console.log(
+            `Fetching session details for: ${sessionId} with account: ${accountId}`
+          );
+
+          const response = await fetch(
+            `/api/checkout_session/${sessionId}?account_id=${accountId}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          console.log("Response status:", response.status);
+          console.log("Response ok:", response.ok);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(
+              "Failed to fetch session details:",
+              response.status,
+              errorText
+            );
+            throw new Error(`Failed to fetch session data: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log("Received data:", data);
+          return data;
+        } catch (error) {
+          console.error("Error fetching session details:", error);
+          throw new Error(
+            `Unable to retrieve payment details: ${error.message}`
+          );
+        }
+      }
+
+      // Update UI with session data
+      function updateUI(sessionData) {
+        console.log("displayPaymentDetails called with:", sessionData);
+
+        if (sessionData.error) {
+          console.log("Data has error:", sessionData.error);
+          throw new Error(sessionData.error);
+        }
+
+        const {
+          amount_total,
+          currency,
+          payment_status,
+          business_name,
+          customer_details,
+          customer_email,
+        } = sessionData;
+
+        // Update merchant name
+        const merchantName = business_name || "Digital Network";
+        document.getElementById("merchant-name").textContent = merchantName;
+        document.getElementById("business").textContent = merchantName;
+
+        // Update payment amount
+        const formattedAmount = formatAmount(amount_total, currency);
+        document.getElementById("payment-amount").textContent = formattedAmount;
+
+        // Update payment status
+        document.getElementById("status").textContent = formatPaymentStatus(
+          payment_status || "completed"
+        );
+
+        // Show customer details if available
+        if (customer_details?.name) {
+          document.getElementById("customer").textContent =
+            customer_details.name;
+          document.getElementById("customer-row").classList.remove("hidden");
+        }
+
+        if (customer_email) {
+          document.getElementById("email").textContent = customer_email;
+          document.getElementById("email-row").classList.remove("hidden");
+
+          // Also show in receipt info
+          document.getElementById("customer-email-receipt").textContent =
+            customer_email;
+          document.getElementById("customer-info").style.display = "block";
+        }
+      }
+
+      function formatPaymentStatus(status) {
+        const statusMap = {
+          paid: "Paid",
+          complete: "Paid",
+          completed: "Paid",
+          processing: "Processing",
+          requires_action: "Requires Action",
+          requires_confirmation: "Requires Confirmation",
+          requires_payment_method: "Requires Payment Method",
+          canceled: "Canceled",
+          cancelled: "Canceled",
+          failed: "Failed",
+          unpaid: "Unpaid",
+        };
+        return (
+          statusMap[status.toLowerCase()] ||
+          status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+        );
+      }
+
+      // Show error state
+      function showError(message) {
+        document.getElementById("loading").classList.add("hidden");
+        if (message) {
+          document.getElementById("error-text").textContent = message;
+        }
+        document.getElementById("error").classList.remove("hidden");
+      }
+
+      // Show success state
+      function showSuccess() {
+        document.getElementById("loading").classList.add("hidden");
+        document.getElementById("success-content").classList.remove("hidden");
+      }
+
+      // Initialize page
+      async function init() {
+        console.log("Page loaded");
+        console.log("Full URL:", window.location.href);
+
+        const sessionId = getSessionId();
+        const accountId = getAccountId();
+
+        console.log("sessionId:", sessionId);
+        console.log("accountId:", accountId);
+
+        if (!sessionId) {
+          console.log("No sessionId found, showing error");
+          showError("No session ID found in URL");
+          return;
+        }
+
+        if (!accountId) {
+          console.log("No accountId found, showing error");
+          showError("No account ID found in URL");
+          return;
+        }
+
+        try {
+          const sessionData = await fetchCheckoutSession(sessionId, accountId);
+          updateUI(sessionData);
+          showSuccess();
+        } catch (error) {
+          console.error("Error in init:", error);
+          showError(error.message);
+        }
+      }
+
+      // Start when page loads
+      document.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>

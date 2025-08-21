@@ -3,6 +3,7 @@ const {
   INDIVIDUAL_PROFILES,
   COMPANY_PROFILES,
 } = require("../config/constants");
+const profileGenerator = require("./profileGenerator");
 
 // Helper function to build base account configuration
 function buildBaseAccountConfig() {
@@ -106,6 +107,7 @@ function buildCompanyAccountConfig(profileData, businessProfile = {}) {
     name: profileData.name,
     address: profileData.address,
     phone: profileData.phone,
+    tax_id: profileData.tax_id,
   };
 
   // Business profile
@@ -159,55 +161,123 @@ async function createConnectedAccount(
 }
 
 /**
+ * Create persons (representatives/owners) for a company account
+ */
+async function createAccountPersons(accountId, representatives) {
+  if (
+    !representatives ||
+    !Array.isArray(representatives) ||
+    representatives.length === 0
+  ) {
+    return [];
+  }
+
+  const createdPersons = [];
+
+  for (const rep of representatives) {
+    try {
+      const person = await stripe.accounts.createPerson(accountId, {
+        first_name: rep.firstName,
+        last_name: rep.lastName,
+        email: rep.email,
+        phone: rep.phone,
+        dob: rep.dob,
+        address: rep.address,
+        relationship: rep.relationship,
+      });
+
+      createdPersons.push(person);
+    } catch (error) {
+      console.error(
+        `Failed to create person for account ${accountId}:`,
+        error.message
+      );
+    }
+  }
+
+  return createdPersons;
+}
+
+/**
  * Get demo profiles for profile selection
+ * @param {object} options - Options for profile generation
+ * @param {boolean} options.useHardcoded - Whether to use hardcoded profiles (for backwards compatibility)
  * @returns {object} - Demo profiles for individual and company
  */
-function getDemoProfiles() {
-  // Return random profiles for demo (instead of always the first ones)
-  const { randomSelection } = require("../config/constants");
-  const selectedIndividual = randomSelection(INDIVIDUAL_PROFILES);
-  const selectedCompany = randomSelection(COMPANY_PROFILES);
+function getDemoProfiles(options = {}) {
+  if (options.useHardcoded) {
+    // Fallback to hardcoded profiles if requested
+    const { randomSelection } = require("../config/constants");
+    const selectedIndividual = randomSelection(INDIVIDUAL_PROFILES);
+    const selectedCompany = randomSelection(COMPANY_PROFILES);
+
+    return {
+      individual: {
+        id: "individual_profile",
+        type: "individual",
+        name: `${selectedIndividual.firstName} ${selectedIndividual.lastName}`,
+        businessName: selectedIndividual.businessName,
+        email: selectedIndividual.email,
+        phone: selectedIndividual.phone,
+        address: selectedIndividual.address,
+        profileData: selectedIndividual,
+      },
+      company: {
+        id: "company_profile",
+        type: "company",
+        name: selectedCompany.name,
+        email: selectedCompany.email,
+        phone: selectedCompany.phone,
+        address: selectedCompany.address,
+        representative: selectedCompany.representative,
+        profileData: selectedCompany,
+      },
+    };
+  }
+
+  // Generate fresh profiles each time instead of using hardcoded ones
+  const generatedIndividual = profileGenerator.generateIndividualProfile();
+  const generatedCompany = profileGenerator.generateCompanyProfile();
 
   return {
     individual: {
       id: "individual_profile",
       type: "individual",
-      name: `${selectedIndividual.firstName} ${selectedIndividual.lastName}`,
-      businessName: selectedIndividual.businessName,
-      email: selectedIndividual.email,
-      phone: selectedIndividual.phone,
-      address: selectedIndividual.address,
-      profileData: selectedIndividual,
+      name: `${generatedIndividual.firstName} ${generatedIndividual.lastName}`,
+      businessName: generatedIndividual.businessName,
+      email: generatedIndividual.email,
+      phone: generatedIndividual.phone,
+      address: generatedIndividual.address,
+      profileData: generatedIndividual,
     },
     company: {
       id: "company_profile",
       type: "company",
-      name: selectedCompany.name,
-      email: selectedCompany.email,
-      phone: selectedCompany.phone,
-      address: selectedCompany.address,
-      representative: selectedCompany.representative,
-      profileData: selectedCompany,
+      name: generatedCompany.name,
+      email: generatedCompany.email,
+      phone: generatedCompany.phone,
+      address: generatedCompany.address,
+      representative: generatedCompany.representative,
+      profileData: generatedCompany,
     },
   };
 }
 
 /**
+ * Generate multiple profiles of a specific type
+ * @param {string} type - 'individual' or 'company'
+ * @param {number} count - Number of profiles to generate
+ * @returns {Array} - Array of generated profiles
+ */
+function generateMultipleProfiles(type, count = 5) {
+  return profileGenerator.generateProfiles(count, type);
+}
+
+/**
  * Create account session for embedded components
- * @param {string} accountId - The account ID
- * @returns {Promise<object>} - Account session object
  */
 async function createAccountSession(accountId) {
-  // First, let's fetch the account to see its current state
   const account = await stripe.accounts.retrieve(accountId);
-  console.info(
-    `INFO: Account business_type: ${account.business_type}, charges_enabled: ${account.charges_enabled}, payouts_enabled: ${account.payouts_enabled}`
-  );
-  console.info(
-    `INFO: Account requirements currently_due: ${JSON.stringify(
-      account.requirements?.currently_due || []
-    )}`
-  );
 
   const session = await stripe.accountSessions.create({
     account: accountId,
@@ -243,7 +313,9 @@ async function createAccountSession(accountId) {
 module.exports = {
   createConnectedAccount,
   getDemoProfiles,
+  generateMultipleProfiles,
   createAccountSession,
   buildIndividualAccountConfig,
   buildCompanyAccountConfig,
+  createAccountPersons,
 };

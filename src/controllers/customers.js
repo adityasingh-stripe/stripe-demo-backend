@@ -1,7 +1,7 @@
 const stripe = require("../config/stripe");
 
 /**
- * Get customers for a connected account
+ * Get customers for an account
  */
 async function getCustomers(req, res) {
   try {
@@ -9,12 +9,9 @@ async function getCustomers(req, res) {
 
     if (!account_id) {
       return res.status(400).json({
-        success: false,
-        message: "account_id is required",
+        error: "account_id is required",
       });
     }
-
-    console.info(`INFO: Fetching customers for account: ${account_id}`);
 
     const customers = await stripe.customers.list(
       {
@@ -26,43 +23,33 @@ async function getCustomers(req, res) {
     );
 
     res.json({
-      success: true,
-      customers: customers.data.map((customer) => ({
-        id: customer.id,
-        name: customer.name,
-        email: customer.email,
-        created: customer.created,
-      })),
+      customers: customers.data,
     });
   } catch (error) {
-    console.error(`ERROR: Failed to fetch customers:`, error.message);
+    console.error("Failed to fetch customers:", error.message);
     res.status(500).json({
-      success: false,
-      message: error.message,
+      error: error.message,
     });
   }
 }
 
 /**
- * Create a new customer for a connected account
+ * Create a customer for an account
  */
 async function createCustomer(req, res) {
   try {
     const { account_id, name, email } = req.body;
 
-    if (!account_id || !name || !email) {
+    if (!account_id) {
       return res.status(400).json({
-        success: false,
-        message: "account_id, name, and email are required",
+        error: "account_id is required",
       });
     }
 
-    console.info(`INFO: Creating customer for account: ${account_id}`);
-
     const customer = await stripe.customers.create(
       {
-        name: name,
-        email: email,
+        name,
+        email,
       },
       {
         stripeAccount: account_id,
@@ -70,19 +57,12 @@ async function createCustomer(req, res) {
     );
 
     res.json({
-      success: true,
-      customer: {
-        id: customer.id,
-        name: customer.name,
-        email: customer.email,
-        created: customer.created,
-      },
+      customer,
     });
   } catch (error) {
-    console.error(`ERROR: Failed to create customer:`, error.message);
+    console.error("Failed to create customer:", error.message);
     res.status(500).json({
-      success: false,
-      message: error.message,
+      error: error.message,
     });
   }
 }

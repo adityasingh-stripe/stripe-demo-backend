@@ -1,14 +1,12 @@
+require("dotenv").config();
 const app = require("./src/app");
-const dotenv = require("dotenv");
 
-// Load environment variables
-dotenv.config();
+const PORT = process.env.PORT || 4242;
 
-const PORT = process.env.PORT || 3000;
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`HSBC Demo Backend Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 module.exports = app;

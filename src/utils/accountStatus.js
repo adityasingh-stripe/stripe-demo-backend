@@ -1,4 +1,4 @@
-// Account status derivation logic based on HSBC requirements
+// Account status derivation logic based on requirements
 function deriveAccountStatus(account) {
   const requirements = account.requirements || {};
   const payoutsEnabled = account.payouts_enabled || false;

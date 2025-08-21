@@ -12,12 +12,8 @@ const {
 
 /**
  * Create test customers for an account
- * @param {string} accountId - The account ID
- * @returns {Promise<string[]>} - Array of customer IDs
  */
 async function createTestCustomers(accountId) {
-  console.log(`Creating test customers for account: ${accountId}`);
-
   const customerPromises = NAMES.map((name) =>
     stripe.customers.create(
       {
@@ -29,148 +25,116 @@ async function createTestCustomers(accountId) {
   );
 
   const customers = await Promise.all(customerPromises);
-  const customerIds = customers.map((c) => c.id);
-  console.log(`Created ${customerIds.length} customers`);
-
-  return customerIds;
+  return customers.map((c) => c.id);
 }
 
 /**
  * Create test payments for an account
- * @param {string} accountId - The account ID
- * @param {string[]} customerIds - Array of customer IDs
- * @returns {Promise<void>}
  */
 async function createTestPayments(accountId, customerIds) {
-  console.log(`Creating test payments for account: ${accountId}`);
+  const paymentPromises = [];
 
-  // Create the "top up" payment
-  await stripe.paymentIntents.create(
+  for (let i = 0; i < 15; i++) {
+    const customerId = randomSelection(customerIds);
+    const amount = randomPrice();
+    const cardToken = randomSelection(CARD_TOKENS);
+
+    paymentPromises.push(
+      stripe.paymentIntents.create(
+        {
+          amount,
+          currency: "gbp",
+          customer: customerId,
+          payment_method: cardToken,
+          confirm: true,
+          return_url: "https://example.com/return",
+        },
+        { stripeAccount: accountId }
+      )
+    );
+  }
+
+  // Create 5 dispute payments
+  for (let i = 0; i < 5; i++) {
+    const disputePayment = stripe.paymentIntents.create(
+      {
+        amount: randomPrice(),
+        currency: "gbp",
+        customer: randomSelection(customerIds),
+        payment_method: DISPUTE_TOKEN,
+        confirm: true,
+        return_url: "https://example.com/return",
+      },
+      { stripeAccount: accountId }
+    );
+
+    paymentPromises.push(disputePayment);
+  }
+
+  const bypassBalancePayment = stripe.paymentIntents.create(
     {
       amount: TOP_UP_AMOUNT,
-      payment_method: BYPASS_BALANCE_TOKEN,
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: "never",
-      },
       currency: "gbp",
       customer: randomSelection(customerIds),
+      payment_method: BYPASS_BALANCE_TOKEN,
       confirm: true,
+      return_url: "https://example.com/return",
     },
     { stripeAccount: accountId }
   );
 
-  // Create regular payments
-  const paymentPromises = Array.from({ length: 20 }, () =>
-    stripe.paymentIntents.create(
-      {
-        amount: randomPrice(),
-        payment_method: randomSelection(CARD_TOKENS),
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: "never",
-        },
-        currency: "gbp",
-        customer: randomSelection(customerIds),
-        confirm: true,
-      },
-      { stripeAccount: accountId }
-    )
-  );
-
-  // Create disputed payments
-  const disputePromises = Array.from({ length: 5 }, () =>
-    stripe.paymentIntents.create(
-      {
-        amount: randomPrice(),
-        payment_method: DISPUTE_TOKEN,
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: "never",
-        },
-        currency: "gbp",
-        customer: randomSelection(customerIds),
-        confirm: true,
-      },
-      { stripeAccount: accountId }
-    )
-  );
-
-  await Promise.all([...paymentPromises, ...disputePromises]);
-  console.log("Created test payments");
+  paymentPromises.push(bypassBalancePayment);
+  await Promise.all(paymentPromises);
 }
 
 /**
  * Create test payouts for an account
- * @param {string} accountId - The account ID
- * @returns {Promise<void>}
  */
 async function createTestPayouts(accountId) {
-  console.log(`Creating test payouts for account: ${accountId}`);
+  let retries = 0;
+  const maxRetries = 10;
 
-  let balanceAvailable = false;
-  let noLoops = 0;
-  const maxLoops = 10;
-  const sleepTime = 1000;
-  const payoutTotal = PAYOUT_AMOUNTS.reduce((sum, amount) => sum + amount, 0);
+  while (retries < maxRetries) {
+    try {
+      const balance = await stripe.balance.retrieve({
+        stripeAccount: accountId,
+      });
 
-  while (!balanceAvailable && noLoops <= maxLoops) {
-    const balance = await stripe.balance.retrieve({ stripeAccount: accountId });
-    const availableBalance =
-      balance.available.find((b) => b.currency === "gbp")?.amount || 0;
+      if (balance.available[0].amount > 0) {
+        const payoutPromises = PAYOUT_AMOUNTS.map((amount) =>
+          stripe.payouts.create(
+            {
+              amount,
+              currency: "gbp",
+            },
+            { stripeAccount: accountId }
+          )
+        );
 
-    balanceAvailable = availableBalance >= payoutTotal;
-    console.info(
-      `Balance check ${noLoops + 1}: ${availableBalance} (need ${payoutTotal})`
-    );
+        await Promise.all(payoutPromises);
+        return;
+      }
 
-    if (!balanceAvailable) {
-      await new Promise((resolve) => setTimeout(resolve, sleepTime));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      retries++;
+    } catch (error) {
+      console.error("Error creating payouts:", error.message);
+      return;
     }
-    noLoops += 1;
   }
 
-  if (balanceAvailable) {
-    await Promise.all(
-      PAYOUT_AMOUNTS.map((amount) =>
-        stripe.payouts.create(
-          {
-            amount: amount,
-            currency: "gbp",
-          },
-          { stripeAccount: accountId }
-        )
-      )
-    );
-    console.log("Created test payouts");
-  } else {
-    console.info("Balance not available for payouts after max retries");
-  }
+  console.info("Balance not available for payouts after max retries");
 }
 
 /**
  * Create all test data for an account
- * @param {string} accountId - The account ID
- * @returns {Promise<void>}
  */
 async function createAllTestData(accountId) {
-  console.log(`Creating all test data for account: ${accountId}`);
-
-  // Create customers first
   const customerIds = await createTestCustomers(accountId);
-
-  // Create payments
   await createTestPayments(accountId, customerIds);
-
-  // Wait for balance to be available and create payouts
   await createTestPayouts(accountId);
-
-  console.log("All test data created successfully");
 }
 
 module.exports = {
-  createTestCustomers,
-  createTestPayments,
-  createTestPayouts,
   createAllTestData,
 };

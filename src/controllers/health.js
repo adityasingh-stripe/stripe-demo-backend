@@ -1,34 +1,70 @@
 /**
- * Health check endpoint
+ * Health check endpoint that also returns publishable key and branding info
  */
-function healthCheck(req, res) {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    message: "HSBC Demo Backend API",
-    version: "1.0.0",
-    endpoints: {
-      "GET /api/profiles": "Get demo profiles for selection",
-      "POST /api/accounts": "Create connected account",
-      "POST /api/account_links": "Create account link for onboarding",
-      "POST /api/payment_links": "Create payment link",
-      "GET /api/accounts/:id": "Get account details",
-      "POST /api/account_sessions":
-        "Create account session for embedded components",
-      "POST /account_session": "Create account session (iOS app endpoint)",
-      "GET /health": "Health check",
-    },
-  });
-}
+async function healthCheck(req, res) {
+  try {
+    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
 
-/**
- * Simple health check endpoint
- */
-function simpleHealthCheck(req, res) {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+    if (!publishableKey) {
+      return res.status(500).json({
+        error: "Stripe publishable key not configured",
+      });
+    }
+
+    const stripe = require("../config/stripe");
+    let logoUrl = null;
+    let iconUrl = null;
+
+    try {
+      const account = await stripe.accounts.retrieve(
+        process.env.STRIPE_ACCOUNT_ID
+      );
+
+      const logoFileId = account.settings?.branding?.logo;
+      const iconFileId = account.settings?.branding?.icon;
+      const primaryColor = account.settings?.branding?.primary_color;
+      const secondaryColor = account.settings?.branding?.secondary_color;
+
+      if (logoFileId) {
+        logoUrl = `${req.protocol}://${req.get("host")}/api/file/${logoFileId}`;
+      }
+
+      if (iconFileId) {
+        iconUrl = `${req.protocol}://${req.get("host")}/api/file/${iconFileId}`;
+      }
+
+      const response = {
+        publishableKey: publishableKey,
+      };
+
+      if (logoUrl) {
+        response.logoUrl = logoUrl;
+      }
+      if (iconUrl) {
+        response.iconUrl = iconUrl;
+      }
+      if (primaryColor) {
+        response.primaryColor = primaryColor;
+      }
+      if (secondaryColor) {
+        response.secondaryColor = secondaryColor;
+      }
+
+      res.json(response);
+    } catch (brandingError) {
+      console.warn("Could not fetch branding info:", brandingError.message);
+      res.json({
+        publishableKey: publishableKey,
+      });
+    }
+  } catch (error) {
+    console.error("Failed to get app info:", error.message);
+    res.status(500).json({
+      error: "Internal server error",
+    });
+  }
 }
 
 module.exports = {
   healthCheck,
-  simpleHealthCheck,
 };
